@@ -2,7 +2,7 @@
 // verbatim (no trimming or normalizing) so reloading rebuilds the exact same board.
 
 import { integer, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import type { ColumnName } from '../src/lib/types.ts';
+import type { ColumnName } from '../src/lib/types.js';
 
 export const uploads = pgTable('uploads', {
   id: uuid('id').primaryKey().defaultRandom(),

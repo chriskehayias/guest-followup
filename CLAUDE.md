@@ -74,7 +74,7 @@ Saving: after a successful render, `main.ts` POSTs `result.rows.map(r => r.origi
 
 - **TypeScript 6 (strict by default):**
   - `verbatimModuleSyntax`: use `import type`.
-  - Imports keep the `.ts` extension.
+  - Imports keep the `.ts` extension, except in `api/`, `server/` and `vite.config.ts`, which use `.js`. Vercel compiles each file to `.js` and runs it in plain Node, so a `.ts` import crashes the function with `ERR_MODULE_NOT_FOUND`.
   - `erasableSyntaxOnly`: no enums or namespaces. Use `as const` arrays and unions, like `MATCH_RULES`.
   - `noUnusedLocals` and `noUnusedParameters` are on.
 - **Server code** (`api/`, `server/`, both config files) is type-checked by `tsconfig.server.json` (Node types, no DOM); `npm run build` runs both configs.

@@ -3,10 +3,10 @@
 // and vite.config.ts mounts them on the dev and preview servers.
 
 import { asc, desc, eq } from 'drizzle-orm';
-import { COLUMNS } from '../src/lib/types.ts';
-import type { GuestRecord, SavedUpload, UploadBody } from '../src/lib/types.ts';
-import { getDb, MissingDatabaseUrlError } from './db.ts';
-import { FIELD_FOR_COLUMN, guests, uploads } from './schema.ts';
+import { COLUMNS } from '../src/lib/types.js';
+import type { GuestRecord, SavedUpload, UploadBody } from '../src/lib/types.js';
+import { getDb, MissingDatabaseUrlError } from './db.js';
+import { FIELD_FOR_COLUMN, guests, uploads } from './schema.js';
 
 /** Well above the PRD's 2,000-row target; stops one request from flooding the database. */
 export const MAX_ROWS = 10_000;

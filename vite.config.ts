@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { defineConfig, loadEnv } from 'vite';
 import type { Connect, Plugin } from 'vite';
-import { setDatabaseUrl } from './server/db.ts';
-import { GET, POST } from './server/guestsApi.ts';
+import { setDatabaseUrl } from './server/db.js';
+import { GET, POST } from './server/guestsApi.js';
 
 type Handler = (request: Request) => Promise<Response>;
 

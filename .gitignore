@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets (DATABASE_URL); .env.example is the committed template
+.env
+.env.*
+!.env.example

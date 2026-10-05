@@ -86,6 +86,18 @@ export interface Summary {
   noContact: number;
 }
 
+/** Body of POST /api/guests: one upload's rows, original values in input order. */
+export interface UploadBody {
+  fileName: string;
+  records: GuestRecord[];
+}
+
+/** An upload as GET /api/guests returns it. */
+export interface SavedUpload extends UploadBody {
+  /** ISO 8601 UTC timestamp, e.g. "2026-10-05T18:31:00.000Z". */
+  uploadedAt: string;
+}
+
 /** Everything the page needs after processing one CSV file. */
 export interface BoardResult {
   mapping: ColumnMapping;

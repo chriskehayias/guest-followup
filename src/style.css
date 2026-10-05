@@ -111,6 +111,9 @@ body {
   margin: 20px 0 16px;
 }
 .status { margin: 0; }
+.save-note { margin: 2px 0 0; color: var(--muted); font-size: 0.9rem; }
+.save-note:empty { display: none; }
+.save-note.is-error { color: var(--red); }
 .status[data-state="idle"], .status[data-state="busy"] { color: var(--muted); }
 .status[data-state="error"] { color: var(--red); }
 .download { display: flex; align-items: center; gap: 12px; }

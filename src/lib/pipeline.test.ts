@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import Papa from 'papaparse';
 import { describe, expect, it } from 'vitest';
-import { processGuestCsv } from './pipeline.ts';
+import { processGuestCsv, processGuestRecords } from './pipeline.ts';
 import { toFollowUpCsv } from './exportCsv.ts';
 import type { Household, MatchRule } from './types.ts';
 
@@ -114,6 +114,18 @@ describe('processGuestCsv input handling', () => {
     expect(result.rows).toHaveLength(2);
     expect(result.parseErrors).toHaveLength(1);
     expect(result.parseErrors[0]).toMatch(/^Row 3: /);
+  });
+});
+
+describe('processGuestRecords (reloading a saved upload)', () => {
+  it('rebuilds exactly the board the CSV produced', () => {
+    const fromCsv = processGuestCsv(sample);
+    const fromRecords = processGuestRecords(fromCsv.rows.map((row) => row.original));
+    expect(fromRecords.mapping.missing).toEqual([]);
+    expect(fromRecords.mapping.extra).toEqual([]);
+    expect(fromRecords.summary).toEqual(fromCsv.summary);
+    expect(fromRecords.households.map((h) => h.flags)).toEqual(fromCsv.households.map((h) => h.flags));
+    expect(toFollowUpCsv(fromRecords.households)).toBe(toFollowUpCsv(fromCsv.households));
   });
 });
 

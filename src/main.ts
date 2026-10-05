@@ -3,7 +3,8 @@
 // textContent (via el()) — never innerHTML — which rules out script injection.
 
 import './style.css';
-import { processGuestCsv } from './lib/pipeline.ts';
+import { fetchLatestUpload, saveUpload } from './api.ts';
+import { processGuestCsv, processGuestRecords } from './lib/pipeline.ts';
 import { formatVisitDate } from './lib/dates.ts';
 import { followUpFileName, toFollowUpCsv } from './lib/exportCsv.ts';
 import type { BoardResult, ColumnMapping, ColumnName, GuestRecord, GuestRow, Household, Summary } from './lib/types.ts';
@@ -57,13 +58,17 @@ fileInput.accept = '.csv,text/csv';
 fileInput.hidden = true;
 dropZone.append(dzTitle, dzHint, chooseBtn);
 
-const privacy = el('p', 'privacy', 'Your file stays on this computer — nothing is uploaded or saved.');
+const privacy = el('p', 'privacy', 'Each upload is saved to the board’s database, and the latest one reloads when you open this page.');
 
 const toolbar = el('div', 'toolbar');
 const status = el('p', 'status', 'No file loaded yet.');
 status.dataset.state = 'idle';
 status.setAttribute('role', 'status');
 status.setAttribute('aria-live', 'polite');
+const saveNote = el('p', 'save-note');
+saveNote.setAttribute('aria-live', 'polite');
+const statusArea = el('div', 'status-area');
+statusArea.append(status, saveNote);
 const downloadArea = el('div', 'download');
 const downloadNote = el('span', 'download-note');
 downloadNote.setAttribute('aria-live', 'polite');
@@ -71,7 +76,7 @@ const downloadBtn = el('button', 'btn btn-primary', 'Download follow-up CSV');
 downloadBtn.type = 'button';
 downloadBtn.disabled = true;
 downloadArea.append(downloadNote, downloadBtn);
-toolbar.append(status, downloadArea);
+toolbar.append(statusArea, downloadArea);
 
 const results = el('div', 'results');
 
@@ -82,12 +87,18 @@ app.replaceChildren(header, main);
 
 let current: BoardResult | null = null;
 let loadSeq = 0; // ignores a slow load if a newer file was dropped meanwhile
+let saveQueue = Promise.resolve(); // saves run one at a time, so the newest upload is saved last
 
 type StatusState = 'idle' | 'busy' | 'ok' | 'error';
 
 function setStatus(state: StatusState, ...parts: (string | Node)[]): void {
   status.dataset.state = state;
   status.replaceChildren(...parts);
+}
+
+function setSaveNote(text: string, isError = false): void {
+  saveNote.textContent = text;
+  saveNote.classList.toggle('is-error', isError);
 }
 
 function setCompact(compact: boolean): void {
@@ -108,6 +119,7 @@ async function loadFile(file: File): Promise<void> {
   current = null;
   downloadBtn.disabled = true;
   downloadNote.textContent = '';
+  setSaveNote('');
   results.replaceChildren();
   setStatus('busy', 'Reading ', el('strong', '', file.name), '…');
 
@@ -124,10 +136,50 @@ async function loadFile(file: File): Promise<void> {
     if (seq !== loadSeq) return;
     const result = processGuestCsv(text);
     renderResult(file.name, result);
+    if (result.rows.length > 0) void saveToDatabase(seq, file.name, result);
   } catch (err) {
     if (seq !== loadSeq) return;
     showLoadError(file.name, `Something went wrong while reading this file: ${errorMessage(err)}`);
   }
+}
+
+async function saveToDatabase(seq: number, fileName: string, result: BoardResult): Promise<void> {
+  setSaveNote('Saving to the database…');
+  const save = saveQueue.then(() => saveUpload(fileName, result.rows.map((row) => row.original)));
+  saveQueue = save.catch(() => undefined);
+  try {
+    await save;
+    if (seq === loadSeq) setSaveNote('Saved to the database.');
+  } catch (err) {
+    if (seq === loadSeq) setSaveNote(`Not saved to the database: ${errorMessage(err)}`, true);
+  }
+}
+
+/** On page open: shows the most recently saved upload, unless a file is dropped first. */
+async function loadSaved(): Promise<void> {
+  const seq = ++loadSeq;
+  setStatus('busy', 'Loading the last saved guest list…');
+  try {
+    const saved = await fetchLatestUpload();
+    if (seq !== loadSeq) return;
+    if (!saved) {
+      setStatus('idle', 'No file loaded yet.');
+      return;
+    }
+    renderResult(saved.fileName, processGuestRecords(saved.records));
+    setSaveNote(`Loaded from the database · uploaded ${formatUploadedAt(saved.uploadedAt)}.`);
+  } catch (err) {
+    if (seq !== loadSeq) return;
+    setStatus('idle', 'No file loaded yet.');
+    setSaveNote(`Couldn’t load the saved guest list: ${errorMessage(err)}`, true);
+  }
+}
+
+/** A full UTC timestamp from our server (not a visit date), shown in local time. */
+function formatUploadedAt(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 function showLoadError(fileName: string, message: string): void {
@@ -537,3 +589,5 @@ window.addEventListener('drop', (e) => {
   dragDepth = 0;
   dropZone.classList.remove('is-dragover');
 });
+
+void loadSaved();
